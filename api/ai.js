@@ -1,5 +1,5 @@
 // Vercel serverless function. The API key lives ONLY in the env var GEMINI_API_KEY.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
 // One system prompt per level: this is how differentiation is achieved.
 const LEVELS = {
