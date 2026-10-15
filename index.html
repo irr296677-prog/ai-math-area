@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Math Differentiator: Area</title>
+<style>
+  :root { --ink:#172d38; --line:#dbe4df; --accent:#18775b; --soft:#e5f5ed; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,"Segoe UI",sans-serif; color:var(--ink); background:#f6f7f1; }
+  main,header { max-width:1100px; margin:0 auto; padding:20px; }
+  h1 { font-family:Georgia,serif; margin:0 0 6px; }
+  .grid { display:grid; gap:16px; }
+  .tabs { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+  .cols { grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); align-items:start; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px; }
+  button,select,input { font:inherit; border-radius:12px; border:1px solid #b9c6c0; padding:12px 14px; background:#fff; color:var(--ink); }
+  button { cursor:pointer; font-weight:700; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .tab[aria-selected=true], .primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .tab { text-align:left; }
+  .full { width:100%; margin-top:10px; text-align:left; }
+  .box { border-radius:12px; padding:12px; margin-top:12px; line-height:1.5; }
+  .hidden { display:none; }
+  .problem { background:var(--soft); border-radius:14px; padding:16px; font-weight:600; line-height:1.5; }
+  svg { width:100%; max-height:260px; } svg text { font:700 15px system-ui; fill:#172d38; }
+  .spin { display:inline-block; width:16px; height:16px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:s .7s linear infinite; vertical-align:-3px; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  :focus-visible { outline:3px solid #efac41; outline-offset:2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Math Differentiator: Area</h1>
+  <p>One topic, three levels. The AI writes a new area problem for the level you choose and helps you solve it.</p>
+</header>
+<main>
+  <div role="tablist" aria-label="Difficulty level" class="grid tabs" id="tabs">
+    <button class="tab" role="tab" data-l="1" aria-selected="true">Level 1: Foundation</button>
+    <button class="tab" role="tab" data-l="2" aria-selected="false">Level 2: Standard</button>
+    <button class="tab" role="tab" data-l="3" aria-selected="false">Level 3: Advanced</button>
+  </div>
+  <div class="grid cols" style="margin-top:16px">
+    <section class="card">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <select id="shape" aria-label="Shape" style="flex:1;min-width:150px">
+          <option value="random">Random shape</option><option value="rectangle">Rectangle</option>
+          <option value="triangle">Triangle</option><option value="circle">Circle</option><option value="composite">Composite</option>
+        </select>
+        <button id="gen" class="primary">Generate problem</button>
+      </div>
+      <p id="loading" class="hidden"><span class="spin"></span> The AI is writing a problem…</p>
+      <p id="error" role="alert" class="box hidden" style="background:#fef2f2;color:#991b1b"></p>
+      <div id="problem" class="problem box" aria-live="polite">Press “Generate problem” to start.</div>
+      <div id="diagram" role="img" aria-label="Diagram of the problem"></div>
+    </section>
+    <aside class="grid">
+      <section class="card">
+        <h2 style="margin-top:0">Your answer</h2>
+        <form id="form" novalidate>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="ans" inputmode="decimal" autocomplete="off" placeholder="Enter a number" aria-label="Your answer" style="flex:1;min-width:0">
+            <b id="unit">cm²</b>
+          </div>
+          <button class="primary full" style="text-align:center">Check answer</button>
+        </form>
+        <p id="fb" class="box hidden" role="status"></p>
+      </section>
+      <section class="card">
+        <h2 style="margin-top:0">Help</h2>
+        <button id="hintBtn" class="full">Get hint</button>
+        <button id="solBtn" class="full">Show solution</button>
+        <button id="misBtn" class="full">Explain my mistake (AI)</button>
+        <p id="hint" class="box hidden" style="background:#fffbeb"></p>
+        <ol id="sol" class="box hidden" style="background:#f1f5f9;padding-left:32px"></ol>
+        <p id="mis" class="box hidden" style="background:#f0f9ff"></p>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const COLORS = { 1:['#18775b','#e5f5ed'], 2:['#235bb8','#eaf1ff'], 3:['#b65b18','#fff0e2'] };
+let level = 1, cur = null, hintN = 0, wrong = null, busy = false;
+
+const show = (id, text) => { const e = $(id); if (text !== undefined) e.textContent = text; e.classList.remove('hidden'); };
+const hide = (...ids) => ids.forEach(i => $(i).classList.add('hidden'));
+const fmt = n => String(Number(n.toFixed(2)));
+
+async function api(body) {
+  const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Server error. Please try again.');
+  return j;
+}
+
+function setLevel(n) {
+  level = n;
+  document.documentElement.style.setProperty('--accent', COLORS[n][0]);
+  document.documentElement.style.setProperty('--soft', COLORS[n][1]);
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(+t.dataset.l === n)));
+  generate();
+}
+$('tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) setLevel(+t.dataset.l); });
+
+// Simple SVG diagram drawn from the verified dimensions.
+function drawing(p) {
+  const d = p.dimensions, u = p.unit.replace('²', ''), F = '#d9f1e5', S = '#23745f';
+  const cut = '#b65b18', head = '<svg viewBox="0 0 440 265" aria-hidden="true">';
+  const L = (x, y, t) => `<text x="${x}" y="${y}">${t} ${u}</text>`;
+  if (p.kind === 'rectangle' || p.kind === 'rect_minus_rect')
+    return head + `<rect x="65" y="38" width="290" height="172" fill="${F}" stroke="${S}" stroke-width="3"/>` + L(170, 30, d.width) + L(4, 126, d.height) +
+      (d.cut_width ? `<rect x="265" y="140" width="90" height="70" fill="#fff" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(215, 238, `cut-out ${d.cut_width} × ${d.cut_height}`) : '') + '</svg>';
+  if (p.kind === 'triangle' || p.kind === 'triangle_minus_rect')
+    return head + `<polygon points="65,210 355,210 190,38" fill="${F}" stroke="${S}" stroke-width="3"/><line x1="190" y1="38" x2="190" y2="210" stroke="${S}" stroke-dasharray="6 5" stroke-width="2"/>` +
+      L(194, 126, 'h = ' + d.height) + L(150, 240, 'b = ' + d.base) +
+      (d.cut_width ? `<rect x="228" y="168" width="44" height="42" fill="#fff" stroke="${cut}" stroke-width="2"/><text x="276" y="190">patch ${d.cut_width} × ${d.cut_height}</text>` : '') + '</svg>';
+  return head + `<circle cx="220" cy="132" r="91" fill="${F}" stroke="${S}" stroke-width="3"/><line x1="220" y1="132" x2="311" y2="132" stroke="${S}" stroke-width="3"/>` + L(238, 122, 'r = ' + d.radius) +
+    (d.inner_radius ? `<circle cx="220" cy="132" r="34" fill="#fff" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(150, 250, 'inner r = ' + d.inner_radius) : '') + '</svg>';
+}
+
+async function generate() {
+  if (busy) return;
+  busy = true; $('gen').disabled = true; show('loading'); hide('error', 'fb', 'hint', 'sol', 'mis');
+  hintN = 0; wrong = null; $('ans').value = '';
+  try {
+    const sel = $('shape').value;
+    const shape = sel === 'random' ? ['rectangle', 'triangle', 'circle', 'composite'][Math.floor(Math.random() * 4)] : sel;
+    cur = await api({ action: 'generate', level, shape });
+    $('problem').textContent = cur.problem;
+    $('unit').textContent = cur.unit;
+    $('diagram').innerHTML = drawing(cur);
+  } catch (e) { show('error', e.message); }
+  finally { hide('loading'); $('gen').disabled = false; busy = false; }
+}
+$('gen').addEventListener('click', generate);
+
+function feedback(msg, ok) {
+  const e = $('fb'); e.textContent = msg; e.className = 'box';
+  e.style.background = ok ? '#ecfdf5' : '#fff1f2'; e.style.color = ok ? '#065f46' : '#9f1239';
+}
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!cur) return feedback('Generate a problem first.', false);
+  const raw = $('ans').value.trim().replace(',', '.').replace(/\s*(cm²|cm2|m²|m2)$/i, '');
+  if (!raw) return feedback('Enter an answer before checking.', false);
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(raw)) return feedback('Enter a number, for example 12.5.', false);
+  const v = Number(raw);
+  if (Math.abs(v - cur.answer) <= 0.01) { wrong = null; feedback(`Correct! The area is ${fmt(cur.answer)} ${cur.unit}.`, true); }
+  else { wrong = v; feedback(`Not quite: ${fmt(v)} ${cur.unit} is not the area. Try a hint or ask the AI to explain your mistake.`, false); }
+});
+
+$('hintBtn').addEventListener('click', () => {
+  if (!cur) return;
+  hintN = Math.min(hintN + 1, 3);
+  show('hint', `Hint ${hintN} of 3: ${cur.hints[hintN - 1]}`);
+});
+$('solBtn').addEventListener('click', () => {
+  if (!cur) return;
+  $('sol').replaceChildren(...cur.steps.map(s => Object.assign(document.createElement('li'), { textContent: s })));
+  show('sol');
+});
+$('misBtn').addEventListener('click', async () => {
+  if (!cur) return;
+  if (wrong === null) return show('mis', 'Enter a wrong answer and press “Check answer” first.');
+  $('misBtn').disabled = true; show('mis', 'The AI is looking at your answer…');
+  try {
+    const r = await api({ action: 'mistake', level, problem: cur.problem, student: wrong, answer: cur.answer, unit: cur.unit });
+    show('mis', r.explanation);
+  } catch (e) { show('mis', e.message); }
+  finally { $('misBtn').disabled = false; }
+});
+setLevel(1);
+</script>
+</body>
+</html>
