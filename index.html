@@ -4,41 +4,52 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Math Differentiator: Area</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#172d38; --line:#dbe4df; --accent:#18775b; --soft:#e5f5ed; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui,"Segoe UI",sans-serif; color:var(--ink); background:#f6f7f1; }
-  main,header { max-width:1100px; margin:0 auto; padding:20px; }
-  h1 { font-family:Georgia,serif; margin:0 0 6px; }
+  :root { --ink:#1b1b1b; --accent:#3f9b2f; --soft:#d9f2c8; --bevel:inset -4px -4px 0 rgba(0,0,0,.28), inset 4px 4px 0 rgba(255,255,255,.4); }
+  * { box-sizing:border-box; border-radius:0 !important; }
+  body { margin:0; font-family:"VT323",monospace; font-size:21px; color:var(--ink); background-color:#79553a;
+    background-image:linear-gradient(45deg,#6b4a32 25%,transparent 25%,transparent 75%,#6b4a32 75%),linear-gradient(45deg,#6b4a32 25%,transparent 25%,transparent 75%,#6b4a32 75%);
+    background-size:32px 32px; background-position:0 0,16px 16px; }
+  main { max-width:1100px; margin:0 auto; padding:20px; }
+  header { max-width:1100px; width:calc(100% - 40px); margin:20px auto 0; padding:20px; background:#5fa832; border:4px solid var(--ink); border-bottom:16px solid #79553a; box-shadow:var(--bevel); color:#fff; text-shadow:3px 3px 0 var(--ink); }
+  header p { margin:8px 0 0; font-size:24px; }
+  h1 { font-family:"Press Start 2P",monospace; font-size:clamp(16px,3.6vw,26px); line-height:1.4; margin:0; }
+  h2 { font-family:"Press Start 2P",monospace; font-size:14px; line-height:1.5; }
   .grid { display:grid; gap:16px; }
   .tabs { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
   .cols { grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); align-items:start; }
-  .card { background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px; }
-  button,select,input { font:inherit; border-radius:12px; border:1px solid #b9c6c0; padding:12px 14px; background:#fff; color:var(--ink); }
-  button { cursor:pointer; font-weight:700; }
+  .card { background:#c6c6c6; border:4px solid var(--ink); box-shadow:var(--bevel); padding:20px; }
+  button,select,input { font:inherit; font-size:21px; border:4px solid var(--ink); padding:10px 14px; background:#8b8b8b; color:#fff; box-shadow:var(--bevel); text-shadow:2px 2px 0 rgba(0,0,0,.45); }
+  input { background:#fff; color:var(--ink); text-shadow:none; box-shadow:inset 4px 4px 0 rgba(0,0,0,.25); }
+  select { background:#8b8b8b; }
+  button { cursor:pointer; font-family:"Press Start 2P",monospace; font-size:11px; line-height:1.6; }
+  button:hover:not(:disabled) { background:#a5a5a5; transform:translateY(-2px); }
+  button:active:not(:disabled) { transform:translateY(2px); }
   button:disabled { opacity:.5; cursor:not-allowed; }
-  .tab[aria-selected=true], .primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .tab { text-align:left; }
+  .tab[aria-selected=true], .primary { background:var(--accent); }
+  .tab { text-align:left; padding:16px; }
   .full { width:100%; margin-top:10px; text-align:left; }
-  .box { border-radius:12px; padding:12px; margin-top:12px; line-height:1.5; }
+  .box { padding:12px; margin-top:12px; line-height:1.3; border:4px solid var(--ink); font-size:22px; }
   .hidden { display:none; }
-  .problem { background:var(--soft); border-radius:14px; padding:16px; font-weight:600; line-height:1.5; }
-  svg { width:100%; max-height:260px; } svg text { font:700 15px system-ui; fill:#172d38; }
-  .spin { display:inline-block; width:16px; height:16px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:s .7s linear infinite; vertical-align:-3px; }
+  .problem { background:var(--soft); font-size:26px; font-weight:400; padding:16px; line-height:1.25; }
+  #diagram { background:#e9e9e9; border:4px solid var(--ink); margin-top:12px; padding:6px; }
+  svg { width:100%; max-height:260px; } svg text { font:700 16px "VT323",monospace; fill:#1b1b1b; }
+  .spin { display:inline-block; width:16px; height:16px; border:4px solid currentColor; border-top-color:transparent; animation:s .7s steps(8) infinite; vertical-align:-3px; }
   @keyframes s { to { transform:rotate(360deg); } }
-  :focus-visible { outline:3px solid #efac41; outline-offset:2px; }
+  :focus-visible { outline:4px solid #ffd800; outline-offset:2px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>AI Math Differentiator: Area</h1>
+  <h1>⛏️ AI Math Differentiator: Area</h1>
   <p>One topic, three levels. The AI writes a new area problem for the level you choose and helps you solve it.</p>
 </header>
 <main>
   <div role="tablist" aria-label="Difficulty level" class="grid tabs" id="tabs">
-    <button class="tab" role="tab" data-l="1" aria-selected="true">Level 1: Foundation</button>
-    <button class="tab" role="tab" data-l="2" aria-selected="false">Level 2: Standard</button>
-    <button class="tab" role="tab" data-l="3" aria-selected="false">Level 3: Advanced</button>
+    <button class="tab" role="tab" data-l="1" aria-selected="true">🌿 Level 1: Foundation</button>
+    <button class="tab" role="tab" data-l="2" aria-selected="false">💎 Level 2: Standard</button>
+    <button class="tab" role="tab" data-l="3" aria-selected="false">🔥 Level 3: Advanced</button>
   </div>
   <div class="grid cols" style="margin-top:16px">
     <section class="card">
@@ -80,7 +91,7 @@
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const COLORS = { 1:['#18775b','#e5f5ed'], 2:['#235bb8','#eaf1ff'], 3:['#b65b18','#fff0e2'] };
+const COLORS = { 1:['#3f9b2f','#d9f2c8'], 2:['#1f93a8','#cdeef2'], 3:['#d9541e','#ffd9c4'] };
 let level = 1, cur = null, hintN = 0, wrong = null, busy = false;
 
 const show = (id, text) => { const e = $(id); if (text !== undefined) e.textContent = text; e.classList.remove('hidden'); };
@@ -105,18 +116,18 @@ $('tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); i
 
 // Simple SVG diagram drawn from the verified dimensions.
 function drawing(p) {
-  const d = p.dimensions, u = p.unit.replace('²', ''), F = '#d9f1e5', S = '#23745f';
-  const cut = '#b65b18', head = '<svg viewBox="0 0 440 265" aria-hidden="true">';
+  const d = p.dimensions, u = p.unit.replace('²', ''), F = '#7cc44a', S = '#1b1b1b';
+  const cut = '#5a3b22', head = '<svg viewBox="0 0 440 265" aria-hidden="true">';
   const L = (x, y, t) => `<text x="${x}" y="${y}">${t} ${u}</text>`;
   if (p.kind === 'rectangle' || p.kind === 'rect_minus_rect')
     return head + `<rect x="65" y="38" width="290" height="172" fill="${F}" stroke="${S}" stroke-width="3"/>` + L(170, 30, d.width) + L(4, 126, d.height) +
-      (d.cut_width ? `<rect x="265" y="140" width="90" height="70" fill="#fff" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(215, 238, `cut-out ${d.cut_width} × ${d.cut_height}`) : '') + '</svg>';
+      (d.cut_width ? `<rect x="265" y="140" width="90" height="70" fill="#a9754a" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(215, 238, `cut-out ${d.cut_width} × ${d.cut_height}`) : '') + '</svg>';
   if (p.kind === 'triangle' || p.kind === 'triangle_minus_rect')
     return head + `<polygon points="65,210 355,210 190,38" fill="${F}" stroke="${S}" stroke-width="3"/><line x1="190" y1="38" x2="190" y2="210" stroke="${S}" stroke-dasharray="6 5" stroke-width="2"/>` +
       L(194, 126, 'h = ' + d.height) + L(150, 240, 'b = ' + d.base) +
-      (d.cut_width ? `<rect x="228" y="168" width="44" height="42" fill="#fff" stroke="${cut}" stroke-width="2"/><text x="276" y="190">patch ${d.cut_width} × ${d.cut_height}</text>` : '') + '</svg>';
+      (d.cut_width ? `<rect x="228" y="168" width="44" height="42" fill="#a9754a" stroke="${cut}" stroke-width="2"/><text x="276" y="190">patch ${d.cut_width} × ${d.cut_height}</text>` : '') + '</svg>';
   return head + `<circle cx="220" cy="132" r="91" fill="${F}" stroke="${S}" stroke-width="3"/><line x1="220" y1="132" x2="311" y2="132" stroke="${S}" stroke-width="3"/>` + L(238, 122, 'r = ' + d.radius) +
-    (d.inner_radius ? `<circle cx="220" cy="132" r="34" fill="#fff" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(150, 250, 'inner r = ' + d.inner_radius) : '') + '</svg>';
+    (d.inner_radius ? `<circle cx="220" cy="132" r="34" fill="#a9754a" stroke="${cut}" stroke-width="2" stroke-dasharray="5 4"/>` + L(150, 250, 'inner r = ' + d.inner_radius) : '') + '</svg>';
 }
 
 async function generate() {
@@ -137,7 +148,7 @@ $('gen').addEventListener('click', generate);
 
 function feedback(msg, ok) {
   const e = $('fb'); e.textContent = msg; e.className = 'box';
-  e.style.background = ok ? '#ecfdf5' : '#fff1f2'; e.style.color = ok ? '#065f46' : '#9f1239';
+  e.style.background = ok ? '#b8f0a0' : '#ffb3a8'; e.style.color = '#1b1b1b';
 }
 $('form').addEventListener('submit', e => {
   e.preventDefault();
